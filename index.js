@@ -66,7 +66,7 @@ client.on('message', async message => {
 		.setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
 
 		// send top25 (or less if not enough entries) if no arguments
-		if (args.length == 0){
+		if (args.length === 0){
 			let maxentries = 0;
 			embed.setDescription(`🏆 Top Welcomers 🏆`)
 			if (sortedLB.length < 25){
@@ -74,7 +74,7 @@ client.on('message', async message => {
 			} else {
 				maxentries = 25;
 			}
-			for (var i = 0; i < maxentries; i++) {
+			for (let i = 0; i < maxentries; i++) {
 				var whoisname = 'Unknown [not in server]';
 				try {
 					const whois = await message.guild.members.fetch(sortedLB[i][0]);
@@ -143,7 +143,7 @@ client.on('message', async message => {
 
 			let posstr = 'Not on the leaderboard';
 			if (sortedLB.findIndex(entry => entry[0] == who.id)) {
-				posstr = (sortedLB.findIndex(entry => entry[0] == who.id)+1) + '° place';
+				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == who.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
@@ -240,3 +240,16 @@ client.on("guildMemberAdd", member => {
 /* DEBUG */
 	
 });
+
+function getPlacementString(place) {
+	// get last digit of the placement
+	let lastDigit = place.substr(place.length - 1, place.length);
+	if (lastDigit === 1) {
+		return `${place}st`;
+	} else if (lastDigit === 2) {
+		return `${place}nd`;
+	} else if (lastDigit === 3) {
+		return `${place}rd`;
+	}
+	return `${place}th`;
+}
