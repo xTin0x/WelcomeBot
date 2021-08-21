@@ -1,20 +1,19 @@
-const config = require('./config.json');
+require('dotenv').config()
 const Discord = require('discord.js');
-const client = new Discord.Client();
+const client = new Discord.Client({ intents:["GUILDS", "GUILD_MESSAGES"]})
 const points = require('./points.json');
 const reactionTimes = require('./reactionTimes.json')
 const fs = require('fs');
 
-const prefix = config.prefix;
+const prefix = process.env.PREFIX;
 var welcomeChannel;
-var debugChannel;
 
 client.once('ready', async () => {
-  welcomeChannel = await client.channels.fetch('1234...'); //replace 1234... with the #general channel id
+  welcomeChannel = await client.channels.fetch(process.env.CHANNEL_ID);
   console.log('Ready!');
 });
 
-client.login(config.token);
+client.login(process.env.TOKEN);
 
 var lockcd = false //dumb, but gets the job done
 
@@ -208,7 +207,6 @@ client.on("guildMemberAdd", member => {
 	|| m.content == `https://c.tenor.com/Qy5sUxL5phgAAAAM/forest-gump-wave.gif`;
 
 	const collector = welcomeChannel.createMessageCollector(filter);
-	const debugcollector = debugChannel.createMessageCollector(filter);
 
 	collector.on('collect', m => {
 		let answertime = new Date();
