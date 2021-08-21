@@ -8,12 +8,19 @@ https://github.com/discordjs/discord.js
 ## Usage
 Before running this bot, replace the values for `TOKEN` and `CHANNEL_ID` in the `.env` file with the appropriate  values for your Discord bot token and channel ID
 #### CLI
- * Install dependencies: `npm install`
- * Start the bot: `node index.js`
+* Install dependencies: `npm install`
+* Start the bot
+  * Local config (`.env`) : `node index.js` OR `npm run start:local`
+  * Dev config - (`.env.dev`) : `npm run start:dev`
+  * Prod config - (`.env.prod`) : `npm run start:prod`
 
 #### Docker
 * Build & tag the image: `docker build . -t welcomebot`
-* Run the container: ` docker run -d welcomebot`
+* Run the container
+  * Interactively to view console logs: ` docker run -it welcomebot`
+  * Detatched in the background: `docker run -d welcomebot`
+    * Output logs with `docker logs -f $(docker ps -aqf "ancestor=welcomebot")`
+  * By default, this will run using the local configuration file, `.env`. To run using another configuration, pass in the environment variable `NODE_ENV` with the appropriate value, i.e `docker run -it -e NODE_ENV=dev welcomebot` OR `docker run -it -e NODE_ENV=prod welcomebot`
 * Cleanup:
   * Stop & remove all welcomebot containers: `docker rm -f $(docker ps -aqf "ancestor=welcomebot")`  
   * Remove welcomebot image `docker rmi -f welcomebot`
