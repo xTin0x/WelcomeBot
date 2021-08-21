@@ -10,7 +10,7 @@ var welcomeChannel;
 
 client.once('ready', async () => {
   welcomeChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-  console.log('Ready!');
+  console.log(`Env: ${process.env.NODE_ENV}\nReady!`);
 });
 
 client.login(process.env.TOKEN);
