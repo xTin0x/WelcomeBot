@@ -23,7 +23,7 @@ TODO: 	Upgrade to Slash Commands
 		Improve handler with command files */
 client.on('message', async message => {
 	const whocalls = message.author;
-	if (!message.content.startsWith(prefix) || whocalls.bot) return;
+	if (!message.channel.name.includes('bot-commands') || !message.content.startsWith(prefix) || whocalls.bot) return;
 
 	const args = message.content.slice(prefix.length).trim().split(' ');
 	const command = args.shift().toLowerCase();
