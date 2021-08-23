@@ -120,7 +120,7 @@ client.on('message', async message => {
 
 			let posstr = 'Not on the leaderboard';
 			if (sortedLB.findIndex(entry => entry[0] == whocalls.id)) {
-				posstr = (sortedLB.findIndex(entry => entry[0] == whocalls.id)+1) + '° place';
+				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == whocalls.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
@@ -171,7 +171,7 @@ client.on('message', async message => {
 				}
 				let pointsstr = sortedLB[pos-1][1]+' points';
 
-				let posstr = pos + '° place';
+				let posstr = `${getPlacementString(pos)} place`;
 
 				let rtstr = 'No reaction time registered';
 				if (reactionTimes[sortedLB[pos-1][0]]) { 
@@ -243,12 +243,13 @@ client.on("guildMemberAdd", member => {
 
 function getPlacementString(place) {
 	// get last digit of the placement
+	place = place.toString();
 	let lastDigit = place.substr(place.length - 1, place.length);
-	if (lastDigit === 1) {
+	if (lastDigit === '1') {
 		return `${place}st`;
-	} else if (lastDigit === 2) {
+	} else if (lastDigit === '2') {
 		return `${place}nd`;
-	} else if (lastDigit === 3) {
+	} else if (lastDigit === '3') {
 		return `${place}rd`;
 	}
 	return `${place}th`;
