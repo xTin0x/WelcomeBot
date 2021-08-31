@@ -119,8 +119,8 @@ client.on('message', async message => {
 			}
 
 			let posstr = 'Not on the leaderboard';
-			if (sortedLB.findIndex(entry => entry[0] == whocalls.id)) {
-				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == whocalls.id)+1)} place`;
+			if (sortedLB.findIndex(entry => entry[0] === whocalls.id) !== -1) {
+				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] === whocalls.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
@@ -142,8 +142,8 @@ client.on('message', async message => {
 			}
 
 			let posstr = 'Not on the leaderboard';
-			if (sortedLB.findIndex(entry => entry[0] == who.id)) {
-				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == who.id)+1)} place`;
+			if (sortedLB.findIndex(entry => entry[0] === who.id) !== -1) {
+				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] === who.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
@@ -208,7 +208,7 @@ client.on("guildMemberAdd", member => {
 	|| m.content == `https://c.tenor.com/Qy5sUxL5phgAAAAM/forest-gump-wave.gif`;
 
 	const collector = welcomeChannel.createMessageCollector(filter);
-	const debugcollector = debugChannel.createMessageCollector(filter);
+	//const debugcollector = debugChannel.createMessageCollector(filter);
 
 	collector.on('collect', m => {
 		let answertime = new Date();
@@ -244,7 +244,14 @@ client.on("guildMemberAdd", member => {
 function getPlacementString(place) {
 	// get last digit of the placement
 	place = place.toString();
-	let lastDigit = place.substr(place.length - 1, place.length);
+	if (place.length >= 2) {
+		const secondDigit = place.substr(place.length - 2, place.length-1);
+		if (secondDigit === "1") {
+			return `${place}th`;
+		}
+	}
+
+	const lastDigit = place.substr(place.length - 1, place.length);
 	if (lastDigit === '1') {
 		return `${place}st`;
 	} else if (lastDigit === '2') {
