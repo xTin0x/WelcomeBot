@@ -4,11 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start:local": "node -r dotenv/config index.js dotenv_config_path=.env",
+    "start:dev": "node -r dotenv/config index.js dotenv_config_path=.env.server-a",
+    "start:prod": "node -r dotenv/config index.js dotenv_config_path=.env.server-b",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.5.1"
+    "discord.js": "^12.5.1",
+    "dotenv": "^10.0.0"
   }
 }

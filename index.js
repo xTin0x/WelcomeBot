@@ -1,20 +1,17 @@
-const config = require('./config.json');
+require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const points = require('./points.json');
 const reactionTimes = require('./reactionTimes.json')
 const fs = require('fs');
 
-const prefix = config.prefix;
-var welcomeChannel;
-var debugChannel;
+const prefix = process.env.PREFIX;
 
-client.once('ready', async () => {
-  welcomeChannel = await client.channels.fetch('1234...'); //replace 1234... with the #general channel id
-  console.log('Ready!');
+client.once('ready', () => {
+  console.log('[INIT]Ready!');
 });
 
-client.login(config.token);
+client.login(process.env.TOKEN);
 
 var lockcd = false //dumb, but gets the job done
 
@@ -29,31 +26,80 @@ client.on('message', async message => {
 	const command = args.shift().toLowerCase();
 
 	if ((command == 'cd' || command == 'countdown') && lockcd == false) {
-		if (args.length != 1) {
-			message.channel.send("Incorrect number of arguments.\n Correct Usage: ```!cd 5``` counts down from 5.");
+		if (args.length < 1) {
+			message.channel.send("Incorrect number of arguments.");
 			return;
-		}
-
-		else { 
+		} else if (message.mentions.users.size < 1){ 
 			lockcd = true;
-			var left = parseInt(args[0]);
-			console.log(`cd started with ${left} as arg`);
-			// COUNTDOWN RANGE: 3 to 5 seconds
-			if (left > 5) { left=5; }
-			else if (left < 3) { left = 3; }
-			else if (!(left >=3 || left <=5)) { left = 3; }
-			var countdown = setInterval(function(){
-					if (left > 0){
-						message.channel.send(left);
-						left = left - 1;
-					}
-					else if (left == 0){
-						message.channel.send('GO!');
-						lockcd = false;
-						console.log('cd ended')
-						clearInterval(countdown);
-					}
-			},1000);
+			let left = parseTimeArg(args[0]);
+			countdown(left, message.channel);
+			return;
+		} else {
+			lockcd = true;
+			const participants = message.mentions.users;
+			// base embed
+			const embed = new Discord.MessageEmbed()
+			.setTitle('READY?')
+			.setDescription('Countdown ready.\nOnce all participants react with 👍 countdown will start.\nReact with 👎 to cancel the countdown.\nIf any participant fails to send a reaction within 1 minute, the countdown will be cancelled.')
+			.setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
+
+			let readyMsg = await message.channel.send(embed);
+
+			readyMsg.react('👍');
+			readyMsg.react('👎');
+
+			const readyFilter = (r, user) => (r.emoji.name === '👍' || r.emoji.name === '👎') && participants.has(user.id);
+			const readyCollector = readyMsg.createReactionCollector(readyFilter, {time:60000, dispose:true});
+
+			let left = parseTimeArg(args[0]);
+			console.log(`[CD]mention countdown ON STAND BY with ${left} as time`);
+			console.log(`[CD]waiting for ${participants.map(user => user.username).join(', ')} to react on countdown confirmation`)
+
+			readyCollector.on('collect', async (r,user) => {
+				if (r.emoji.name === '👎') {
+					console.log(`[CD]${user.username} is NOT READY`);
+					readyCollector.stop(`${user.username} is NOT READY`);
+					embed.setTitle('COUNTDOWN CANCELLED')
+					.setDescription(`${user.username} is NOT READY. Countdown cancelled...`)
+					readyMsg.delete();
+					readyMsg = await message.channel.send(embed);
+					setTimeout(() => {
+						readyMsg.delete();
+					}, 5000);
+					lockcd = false;
+					return;
+				} else {
+					console.log(`[CD]${user.username} is READY`);
+				}
+
+				if (readyCollector.users.equals(participants) && r.emoji.name != '👎') {
+					embed.setTitle('COUNTDOWN STARTING')
+					.setDescription('All participants are ready!\nGood Luck!');
+					readyMsg.delete();
+					readyMsg = await message.channel.send(embed);
+
+					countdown(left, message.channel);
+					return;
+				}
+			});
+			readyCollector.on('remove', async (r,user) => {
+				console.log(`[CD]${user.username} is NO LONGER READY`)
+			});
+			readyCollector.on('end', async (collected, reason) => {
+				if (reason.includes('time')){
+					console.log(`[CD]countdown TIMED OUT`);
+					const noAnswers = readyCollector.users.difference(participants).map(user => user.username);
+					console.log(`[CD]${noAnswers.join(', ')} didn't answer within 60 seconds`)
+					embed.setTitle('COUNTDOWN CANCELLED')
+					.setDescription(`${noAnswers.join(', ')} didn't react. Countdown cancelled...`);
+					readyMsg.delete();
+					readyMsg = await message.channel.send(embed);
+					setTimeout(() => {
+						readyMsg.delete();
+					}, 5000);
+					lockcd = false;
+				}
+			});
 		}
 	} else if (command == 'welcomepoints' || command == 'wp'){
 		// sort point db into array []
@@ -67,6 +113,7 @@ client.on('message', async message => {
 
 		// send top25 (or less if not enough entries) if no arguments
 		if (args.length == 0){
+			console.log(`[WP]${whocalls.username} queried top welcomers`);
 			let maxentries = 0;
 			embed.setDescription(`🏆 Top Welcomers 🏆`)
 			if (sortedLB.length < 25){
@@ -74,22 +121,24 @@ client.on('message', async message => {
 			} else {
 				maxentries = 25;
 			}
-			for (var i = 0; i < maxentries; i++) {
-				var whoisname = 'Unknown [not in server]';
+			for (let i = 0; i < maxentries; i++) {
+				let whoisname = 'Unknown';
 				try {
-					const whois = await message.guild.members.fetch(sortedLB[i][0]);
-					whoisname = whois.user.username;
+					//const whois = await message.guild.members.fetch(sortedLB[i][0]);
+					const whois = await client.users.fetch(sortedLB[i][0]);
+					whoisname = whois.username;
 				} catch (err) {
 				}
-				embed.addField(`🔸${i+1} ${whoisname}`, `${sortedLB[i][1]} points`, true);
+				embed.addField(`🔸${getPlacementString(i+1)} ${whoisname}`, `${sortedLB[i][1]} points`, true);
 			}
 
 			message.reply(embed);
 		} else if (args.length > 1) {
 			// ONLY ONE MENTION ALLOWED FOR QUERY
-			console.log('too many args');
+			console.log('[WP]too many args');
 			return;
 		} else if (args[0] == 'reaction' || args[0] == 'rt'){
+			console.log(`[WP]${whocalls.username} queried fastest welcomers`);
 			let maxentries = 0;
 			const sortedRT = Object.entries(reactionTimes)
 			.sort(([,x],[,y]) => x-y);
@@ -102,17 +151,18 @@ client.on('message', async message => {
 				maxentries = 25;
 			}
 			for (var i = 0; i < maxentries; i++) {
-				let whoisname = 'unknown [not in server]';
+				let whoisname = 'Unknown';
 				try {
-					const whois = await message.guild.members.fetch(sortedRT[i][0]);
-					whoisname = whois.user.username;
+					const whois = await client.users.fetch(sortedRT[i][0]);
+					whoisname = whois.username;
 				} catch (err) {
 				}
-				embed.addField(`🔸${i+1} ${whoisname}`, `${sortedRT[i][1]} ms`, true);
+				embed.addField(`🔸${getPlacementString(i+1)} ${whoisname}`, `${sortedRT[i][1]} ms`, true);
 			}
 
 			message.reply(embed);
 		} else if (args[0] == 'me') {
+			console.log(`[WP]${whocalls.username} queried their welcome points info`);
 			let pointsstr = '0 points';
 			if(points[whocalls.id]) {
 				pointsstr = points[whocalls.id] + ' points'
@@ -120,7 +170,7 @@ client.on('message', async message => {
 
 			let posstr = 'Not on the leaderboard';
 			if (sortedLB.findIndex(entry => entry[0] == whocalls.id)) {
-				posstr = (sortedLB.findIndex(entry => entry[0] == whocalls.id)+1) + '° place';
+				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == whocalls.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
@@ -135,6 +185,7 @@ client.on('message', async message => {
 			message.reply(embed);
 		} else if (message.mentions.users.size == 1) {
 			let who = message.mentions.users.first();
+			console.log(`[WP]${whocalls.username} queried ${who.usename}'s welcome points info`);
 
 			let pointsstr = '0 points';
 			if(points[who.id]) {
@@ -143,7 +194,7 @@ client.on('message', async message => {
 
 			let posstr = 'Not on the leaderboard';
 			if (sortedLB.findIndex(entry => entry[0] == who.id)) {
-				posstr = (sortedLB.findIndex(entry => entry[0] == who.id)+1) + '° place';
+				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == who.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
@@ -158,8 +209,9 @@ client.on('message', async message => {
 			message.reply(embed);
 		} else if (parseInt(args[0]) > 0) {
 			const pos = parseInt(args[0]);
+			console.log(`[WP]${whocalls.username} queried pos. ${pos} on the WP leaderboard`);
 			if (pos > sortedLB.length) {
-				console.log('query outside of range')
+				console.log('[WP]query outside of range')
 				message.reply(`This leaderboard only has ${sortedLB.length} entries, try with a number lower than that.`)
 				return;
 			} else {
@@ -171,7 +223,7 @@ client.on('message', async message => {
 				}
 				let pointsstr = sortedLB[pos-1][1]+' points';
 
-				let posstr = pos + '° place';
+				let posstr = `${getPlacementString(pos)} place`;
 
 				let rtstr = 'No reaction time registered';
 				if (reactionTimes[sortedLB[pos-1][0]]) { 
@@ -188,18 +240,19 @@ client.on('message', async message => {
 	} else if (command == 'help' || command == 'h'){
 		const embed = new Discord.MessageEmbed()
 		.setTitle(`MGSRBot's List of Commands`)
-		.setDescription(`Commands have a short version indicated in <angle brackets>, with optional arguments in [square brackets]`)
+		.setDescription(`Commands have a short version indicated with <angle brackets>, with optional arguments in [square brackets]. If only one argument from a group of arguments {arg1 | arg2} is allowed it will be indicated with {curly brackets}. If the argument is a keyword it will be indicated with "quotation marks".`)
 		.setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL())
-		.addField(`countdown <cd> n`, `Starts a countdown.\n\nExample: ${prefix}cd 5`)
-		.addField(`welcomepoints <wp> [me][@User]`, `Welcome points leaderboard.\nIf you use the command without arguments it shows you the top 10. If you mention a User or use "me" as an argument it shows the points that specific user has.\n\nExample: ${prefix}wp @${whocalls.username}`);
+		.addField(`countdown<cd> [TIME] [@User(s)]`, `Starts a countdown. If no users are mentioned the TIME argument is mandatory. TIME can only be in the range {3...10} and if omitted will default to 5. If any user is mentioned in the command the countdown will only start once all mentioned users have declared they're ready.\n\nExamples:\n"${prefix}cd 5" will start counting down from 5.\n\n "${prefix}cd @UserA @UserB" will ask UserA and UserB for confirmation via reactions before starting counting down from 5.`)
+		.addField(`welcomepoints<wp> [ {"me" | "rt" | @User | POSITION} ]`, `Welcome points leaderboard. If you use the command without arguments it shows you the top 25. If you mention a User or use {"me" | POSITION} as an argument it will show said user's info. If "rt" is used as an argument it will show a list of the fastest welcomes.\n\nExamples:\n"${prefix}wp @${whocalls.username}" shows you ${whocalls.username}'s points, fastest reaction and position in the leaderboard.\n\n"${prefix}wp 42" shows you the 42nd place in the leaderboard.`);
 		message.reply(embed);
 	}
 });
 
 /* Welcome Points */
 client.on("guildMemberAdd", member => {
+	const welcomeChannel = member.guild.systemChannel;
 	let jointime = new Date();
-	console.log(`${member.user.username} just joined the server, waiting for welcome message...`);
+	console.log(`[WP]${member.user.username} just joined the server, waiting for welcome message...`);
 
 	const filter = m => m.content.toLowerCase().startsWith('welcome') 
 	|| m.content.toLowerCase().startsWith('greetings')
@@ -208,13 +261,12 @@ client.on("guildMemberAdd", member => {
 	|| m.content == `https://c.tenor.com/Qy5sUxL5phgAAAAM/forest-gump-wave.gif`;
 
 	const collector = welcomeChannel.createMessageCollector(filter);
-	const debugcollector = debugChannel.createMessageCollector(filter);
 
 	collector.on('collect', m => {
 		let answertime = new Date();
 		let deltatime = answertime - jointime;
 		let dtstring = deltatime + 'ms';
-		console.log(`${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
+		console.log(`[WP]${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
 		if (!points[m.author.id]){
 			points[m.author.id] = 1;
 		} else {
@@ -236,7 +288,40 @@ client.on("guildMemberAdd", member => {
 			console.error(err)
 		}
 	});
-
-/* DEBUG */
-	
 });
+
+function countdown(time, channel){
+	let left = time;
+	console.log(`[CD]countdown STARTED with ${left} as time`);
+	let countdown = setInterval(function(){
+			if (left > 0){
+				channel.send(left);
+				left = left - 1;
+			}
+			else if (left == 0){
+				channel.send('GO!');
+				lockcd = false;
+				console.log('[CD]countdown ENDED')
+				clearInterval(countdown);
+			}
+	},1000);
+}
+
+function parseTimeArg(time){
+	let left = parseInt(time);
+	// COUNTDOWN RANGE: 3 to 5 seconds
+	if (left > 10) { left=10; }
+	else if (left < 3) { left = 3; }
+	else if (!(left >=3 || left <=10)) { left = 5; }
+	return left;
+}
+
+/* Thanks Carigs <3 
+https://github.com/mcarigs */
+function getPlacementString(pos){
+    let i = pos % 10, j = pos % 100;
+    if (i == 1 && j != 11) { return `${pos}st`; }
+    if (i == 2 && j != 12) { return `${pos}nd`; }
+    if (i == 3 && j != 13) { return `${pos}rd`; }
+    return `${pos}th`;
+}
