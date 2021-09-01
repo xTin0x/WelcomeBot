@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start:local": "node -r dotenv/config index.js dotenv_config_path=.env",
-    "start:dev": "node -r dotenv/config index.js dotenv_config_path=.env.server-a",
-    "start:prod": "node -r dotenv/config index.js dotenv_config_path=.env.server-b",
+    "start:server-a": "node -r dotenv/config index.js dotenv_config_path=.env.server-a",
+    "start:server-b": "node -r dotenv/config index.js dotenv_config_path=.env.server-b",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
