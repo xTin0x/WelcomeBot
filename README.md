@@ -6,7 +6,7 @@ Dependencies:
 https://github.com/discordjs/discord.js
 
 ## Usage
-Before running this bot, replace the values for `TOKEN` and `CHANNEL_ID` in the `.env` file with the appropriate  values for your Discord bot token and channel ID
+Before running this bot, replace the values for `TOKEN` and `token` in the `.env` and `config.json` files, respectively, with the appropriate values for your Discord bot token and channel ID
 #### CLI
 * Install dependencies: `npm install`
 * Start the bot
