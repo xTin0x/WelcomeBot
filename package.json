@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start:local": "node -r dotenv/config index.js dotenv_config_path=.env",
+    "start:local": "node -r dotenv/config index.js dotenv_config_path=.env.local",
     "start:server-a": "node -r dotenv/config index.js dotenv_config_path=.env.server-a",
     "start:server-b": "node -r dotenv/config index.js dotenv_config_path=.env.server-b",
     "test": "echo \"Error: no test specified\" && exit 1"
