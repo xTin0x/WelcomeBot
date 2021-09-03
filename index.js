@@ -223,7 +223,7 @@ client.on('message', async message => {
 					whoisname = whois.username;
 				} catch (err) {
 				}
-				embed.addField(`🔸${getPlacementString(i+1)} ${whoisname}`, `${sortedLB[i][1]} points`, true);
+				embed.addField(`${getPlacementString(i+1)} ${whoisname}`, `${sortedLB[i][1]} points`, true);
 			}
 
 			message.reply(embed);
@@ -251,7 +251,7 @@ client.on('message', async message => {
 					whoisname = whois.username;
 				} catch (err) {
 				}
-				embed.addField(`🔸${getPlacementString(i+1)} ${whoisname}`, `${sortedRT[i][1]} ms`, true);
+				embed.addField(`${getPlacementString(i+1)} ${whoisname}`, `${sortedRT[i][1]} ms`, true);
 			}
 
 			message.reply(embed);
