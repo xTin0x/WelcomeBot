@@ -381,6 +381,7 @@ client.on("guildMemberAdd", member => {
 });
 
 client.on("guildCreate", async guild => {
+	console.log(`[NEW SERVER]bot was invited to a new server ${guild.name}(${guild.id})`)
 	try {
 		const welcomeChannel = guild.systemChannel;
 		welcomeChannel.send(sendHelp('new', '!'));
