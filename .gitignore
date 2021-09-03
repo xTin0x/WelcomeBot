@@ -121,3 +121,4 @@ dist
 points.json
 reactionTimes.json
 config.json
+.env.local
