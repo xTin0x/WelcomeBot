@@ -1,41 +1,116 @@
 require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
+const config = require('./config.json')
 const points = require('./points.json');
 const reactionTimes = require('./reactionTimes.json')
 const fs = require('fs');
 
-const prefix = process.env.PREFIX;
+const prefix = config.prefix;
 
 client.once('ready', () => {
   console.log('[INIT]Ready!');
 });
 
-client.login(process.env.TOKEN);
+//client.login(process.env.TOKEN); Using .json token while I fix Docker issues.
+client.login(config.token);
 
-var lockcd = false //dumb, but gets the job done
+var lockcd = new Object(); //dumb, but gets the job done
 
 /* Commands
 TODO: 	Upgrade to Slash Commands
 		Improve handler with command files */
 client.on('message', async message => {
+	/* FILTERS */
+	message.mentions.users.sweep(user => user.bot); //cannot reference bots for commands!
+
+	/* GET GUILD PREFIX */
+	let guildPrefix = prefix[message.guild.id];
+	if (typeof guildPrefix == 'undefined') {
+		config.prefix[message.guild.id] = "!" ; 
+		guildPrefix = prefix[message.guild.id];
+		try { fs.writeFileSync('./config.json', JSON.stringify(config)); }
+		catch(err) { console.error(err); }
+	}
+
 	const whocalls = message.author;
-	if (!message.content.startsWith(prefix) || whocalls.bot) return;
+	
+	if (!message.content.startsWith(guildPrefix) || whocalls.bot) return;
 
-	const args = message.content.slice(prefix.length).trim().split(' ');
+	const args = message.content.slice(guildPrefix.length).trim().split(' ');
 	const command = args.shift().toLowerCase();
+	/* NEW PREFIX COMMAND */
+	if ((command == 'p' || command == 'prefix')) {
+		if (args.length != 1) {
+			message.reply('Invalid number of arguments (max: 1).')
+		} else {
+			const embed = new Discord.MessageEmbed()
+			.setTitle('PREFIX CONFIGURATION')
+			.setDescription(`Are you sure you want to change this bot's command prefix to:`)
+			.addField(`${args[0]}`, `👍 to confirm. 👎 to cancel.`)
+			.setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
 
-	if ((command == 'cd' || command == 'countdown') && lockcd == false) {
+			let readyMsg = await message.channel.send(embed);
+
+			readyMsg.react('👍');
+			readyMsg.react('👎');
+
+			const readyFilter = (r, user) => (r.emoji.name === '👍' || r.emoji.name === '👎') && user.id === whocalls.id;
+			const readyCollector = readyMsg.createReactionCollector(readyFilter, {time:60000, dispose:true});
+
+			console.log(`[GUILD_CONFIG]attempting to change ${message.guild.name}(${message.guild.id})'s prefix to ${args[0]}`);
+
+			readyCollector.on('collect', async (r,user) => {
+				if (r.emoji.name === '👎') {
+					console.log(`[GUILD_CONFIG]cancelled prefix change`);
+					readyCollector.stop(`${user.username} cancelled`);
+					embed.setTitle('PREFIX CONFIGURATION')
+					.setDescription(`Prefix change cancelled...`);
+					delete embed.fields[0];
+					readyMsg.delete();
+					readyMsg = await message.channel.send(embed);
+					setTimeout(() => {
+						readyMsg.delete();
+					}, 5000);
+					return;
+				} else {
+					console.log(`[GUILD_CONFIG]${message.guild.name}(${message.guild.id})'s prefix succesfully changed to ${args[0]}`);
+					config.prefix[message.guild.id] = args[0];
+					try { fs.writeFileSync('./config.json', JSON.stringify(config)); }
+					catch(err) { console.error(err); }
+					embed.setTitle('PREFIX CONFIGURATION')
+					.setDescription('Prefix succesfully changed to: ');
+					embed.fields[0].value = '👍';
+					readyMsg.delete();
+					readyMsg = await message.channel.send(embed);
+				}
+			});
+		}
+		config.prefix[message.guild.id] = "!" ; 
+		guildPrefix = prefix[message.guild.id];
+		try { fs.writeFileSync('./config.json', JSON.stringify(config)); }
+		catch(err) { console.error(err); }
+	}
+
+	/* COUNTDOWN COMMAND */ 
+	if ((command == 'cd' || command == 'countdown') &&(lockcd[message.channel.id] === false || typeof lockcd[message.channel.id] == 'undefined') ) {
+		/* NO ARGS (DEFAULT CD OF 5 SECONDS */ 
 		if (args.length < 1) {
-			message.channel.send("Incorrect number of arguments.");
+			lockcd[message.channel.id] = true;
+			const left = parseTimeArg(5);
+			countdown(left,message.channel);
 			return;
-		} else if (message.mentions.users.size < 1){ 
-			lockcd = true;
+		} 
+		/* NO MENTIONED USERS (CD: ARG OR DEFAULT 5)*/
+		else if (message.mentions.users.size < 1) { 
+			lockcd[message.channel.id] = true;
 			let left = parseTimeArg(args[0]);
 			countdown(left, message.channel);
 			return;
-		} else {
-			lockcd = true;
+		} 
+		/* MENTIONED USERS (CD: ARG OR DEFAULT 5) */
+		else {
+			lockcd[message.channel.id] = true;
 			const participants = message.mentions.users;
 			// base embed
 			const embed = new Discord.MessageEmbed()
@@ -66,11 +141,12 @@ client.on('message', async message => {
 					setTimeout(() => {
 						readyMsg.delete();
 					}, 5000);
-					lockcd = false;
+					lockcd[message.channel.id] = false;
 					return;
 				} else {
 					console.log(`[CD]${user.username} is READY`);
 				}
+				readyCollector.users.sweep(user => user.bot);
 
 				if (readyCollector.users.equals(participants) && r.emoji.name != '👎') {
 					embed.setTitle('COUNTDOWN STARTING')
@@ -97,13 +173,31 @@ client.on('message', async message => {
 					setTimeout(() => {
 						readyMsg.delete();
 					}, 5000);
-					lockcd = false;
+					lockcd[message.channel.id] = false;
 				}
 			});
 		}
-	} else if (command == 'welcomepoints' || command == 'wp'){
+	} 
+	/* WELCOME POINTS COMMAND */ 
+	else if (command == 'welcomepoints' || command == 'wp'){
+		/* GET OR INITIALIZE POINTS/REACTION LEADERBOARDS */
+		let guildPoints = points[message.guild.id];
+		if (typeof guildPoints == 'undefined') {
+			points[message.guild.id] = new Object() ; 
+			guildPoints = points[message.guild.id];
+			try { fs.writeFileSync('./points.json', JSON.stringify(points)); }
+			catch(err) { console.error(err); };
+		}
+		let guildRT = reactionTimes[message.guild.id];
+		if (typeof guildRT == 'undefined') {
+			reactionTimes[message.guild.id] = new Object() ; 
+			guildRT = reactionTimes[message.guild.id];
+			try { fs.writeFileSync('./reactionTimes.json', JSON.stringify(reactionTimes)); }
+			catch(err) { console.error(err); }
+		}
+
 		// sort point db into array []
-		const sortedLB = Object.entries(points)
+		const sortedLB = Object.entries(guildPoints)
 			.sort(([,x],[,y]) => y-x);
 
 		// base embed
@@ -140,7 +234,7 @@ client.on('message', async message => {
 		} else if (args[0] == 'reaction' || args[0] == 'rt'){
 			console.log(`[WP]${whocalls.username} queried fastest welcomers`);
 			let maxentries = 0;
-			const sortedRT = Object.entries(reactionTimes)
+			const sortedRT = Object.entries(guildRT)
 			.sort(([,x],[,y]) => x-y);
 
 			embed.setDescription('⚡ Fastest Welcomes ⚡');
@@ -164,18 +258,18 @@ client.on('message', async message => {
 		} else if (args[0] == 'me') {
 			console.log(`[WP]${whocalls.username} queried their welcome points info`);
 			let pointsstr = '0 points';
-			if(points[whocalls.id]) {
-				pointsstr = points[whocalls.id] + ' points'
+			if(guildPoints[whocalls.id]) {
+				pointsstr = guildPoints[whocalls.id] + ' points'
 			}
 
 			let posstr = 'Not on the leaderboard';
-			if (sortedLB.findIndex(entry => entry[0] == whocalls.id)) {
+			if (sortedLB.findIndex(entry => entry[0] == whocalls.id) != -1) {
 				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == whocalls.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
-			if (reactionTimes[whocalls.id]) { 
-				rtstr = reactionTimes[whocalls.id]+'ms'
+			if (guildRT[whocalls.id]) { 
+				rtstr = guildRT[whocalls.id]+'ms'
 			}
 
 			embed.setDescription(`Your welcome points`)
@@ -185,21 +279,21 @@ client.on('message', async message => {
 			message.reply(embed);
 		} else if (message.mentions.users.size == 1) {
 			let who = message.mentions.users.first();
-			console.log(`[WP]${whocalls.username} queried ${who.usename}'s welcome points info`);
+			console.log(`[WP]${whocalls.username} queried ${who.username}'s welcome points info`);
 
 			let pointsstr = '0 points';
-			if(points[who.id]) {
-				pointsstr = points[who.id] + ' points'
+			if(guildPoints[who.id]) {
+				pointsstr = guildPoints[who.id] + ' points'
 			}
 
 			let posstr = 'Not on the leaderboard';
-			if (sortedLB.findIndex(entry => entry[0] == who.id)) {
+			if (sortedLB.findIndex(entry => entry[0] == who.id) != -1) {
 				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == who.id)+1)} place`;
 			}
 
 			let rtstr = 'No reaction time registered';
-			if (reactionTimes[who.id]) { 
-				rtstr = reactionTimes[who.id]+'ms'
+			if (guildRT[who.id]) { 
+				rtstr = guildRT[who.id]+'ms'
 			}
 
 			embed.setDescription(`${who.username}'s welcome points`)
@@ -226,8 +320,8 @@ client.on('message', async message => {
 				let posstr = `${getPlacementString(pos)} place`;
 
 				let rtstr = 'No reaction time registered';
-				if (reactionTimes[sortedLB[pos-1][0]]) { 
-					rtstr = reactionTimes[sortedLB[pos-1][0]]+'ms'
+				if (guildRT[sortedLB[pos-1][0]]) { 
+					rtstr = guildRT[sortedLB[pos-1][0]]+'ms'
 				}
 
 				embed.setDescription(`${whoisname}'s welcome points`)
@@ -238,20 +332,14 @@ client.on('message', async message => {
 			}
 		}
 	} else if (command == 'help' || command == 'h'){
-		const embed = new Discord.MessageEmbed()
-		.setTitle(`MGSRBot's List of Commands`)
-		.setDescription(`Commands have a short version indicated with <angle brackets>, with optional arguments in [square brackets]. If only one argument from a group of arguments {arg1 | arg2} is allowed it will be indicated with {curly brackets}. If the argument is a keyword it will be indicated with "quotation marks".`)
-		.setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL())
-		.addField(`countdown<cd> [TIME] [@User(s)]`, `Starts a countdown. If no users are mentioned the TIME argument is mandatory. TIME can only be in the range {3...10} and if omitted will default to 5. If any user is mentioned in the command the countdown will only start once all mentioned users have declared they're ready.\n\nExamples:\n"${prefix}cd 5" will start counting down from 5.\n\n "${prefix}cd @UserA @UserB" will ask UserA and UserB for confirmation via reactions before starting counting down from 5.`)
-		.addField(`welcomepoints<wp> [ {"me" | "rt" | @User | POSITION} ]`, `Welcome points leaderboard. If you use the command without arguments it shows you the top 25. If you mention a User or use {"me" | POSITION} as an argument it will show said user's info. If "rt" is used as an argument it will show a list of the fastest welcomes.\n\nExamples:\n"${prefix}wp @${whocalls.username}" shows you ${whocalls.username}'s points, fastest reaction and position in the leaderboard.\n\n"${prefix}wp 42" shows you the 42nd place in the leaderboard.`);
-		message.reply(embed);
+		message.reply(sendHelp(whocalls, guildPrefix));
 	}
 });
 
 /* Welcome Points */
 client.on("guildMemberAdd", member => {
 	const welcomeChannel = member.guild.systemChannel;
-	let jointime = new Date();
+	const jointime = new Date();
 	console.log(`[WP]${member.user.username} just joined the server, waiting for welcome message...`);
 
 	const filter = m => m.content.toLowerCase().startsWith('welcome') 
@@ -262,21 +350,23 @@ client.on("guildMemberAdd", member => {
 
 	const collector = welcomeChannel.createMessageCollector(filter);
 
-	collector.on('collect', m => {
-		let answertime = new Date();
-		let deltatime = answertime - jointime;
+	collector.on('collect', async m => {
+		const guildPoints = points[m.guild.id];
+		const guildRT = reactionTimes[m.guild.id];
+		const answertime = new Date();
+		const deltatime = answertime - jointime;
 		let dtstring = deltatime + 'ms';
 		console.log(`[WP]${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
-		if (!points[m.author.id]){
-			points[m.author.id] = 1;
+		if (!guildPoints[m.author.id]){
+			points[m.guild.id][m.author.id] = 1;
 		} else {
-			points[m.author.id] += 1;
+			points[m.guild.id][m.author.id] += 1;
 		}
-		if (!reactionTimes[m.author.id]){
-			reactionTimes[m.author.id] = deltatime;
+		if (!guildRT[m.author.id]){
+			reactionTimes[m.guild.id][m.author.id] = deltatime;
 			dtstring = dtstring+' (New PB!)';
-		} else if (reactionTimes[m.author.id] > deltatime) {
-			reactionTimes[m.author.id] = deltatime;
+		} else if (guildRT[m.author.id] > deltatime) {
+			reactionTimes[m.guild.id][m.author.id] = deltatime;
 			dtstring += ' (New PB!)';
 		}
 		m.reply(`+1 welcome point! [Response time: ${dtstring}]`);
@@ -290,6 +380,15 @@ client.on("guildMemberAdd", member => {
 	});
 });
 
+client.on("guildCreate", async guild => {
+	try {
+		const welcomeChannel = guild.systemChannel;
+		welcomeChannel.send(sendHelp('new', '!'));
+	} catch(err) {
+
+	}
+})
+
 function countdown(time, channel){
 	let left = time;
 	console.log(`[CD]countdown STARTED with ${left} as time`);
@@ -300,7 +399,7 @@ function countdown(time, channel){
 			}
 			else if (left == 0){
 				channel.send('GO!');
-				lockcd = false;
+				lockcd[channel.id] = false;
 				console.log('[CD]countdown ENDED')
 				clearInterval(countdown);
 			}
@@ -316,12 +415,29 @@ function parseTimeArg(time){
 	return left;
 }
 
+function sendHelp(whocalls, guildPrefix) {
+	const embed = new Discord.MessageEmbed()
+		.setTitle(`WelcomeBot's List of Commands`)
+		.setDescription(`Commands have a short version indicated with <angle brackets>, with optional arguments in [square brackets]. If only one argument from a group of arguments {arg1 | arg2} is allowed it will be indicated with {curly brackets}. If the argument is a keyword it will be indicated with "quotation marks".`)
+		.addField(`countdown<cd> [TIME] [@User(s)]`, `Starts a countdown. If no users are mentioned the TIME argument is mandatory. TIME can only be in the range {3...10} and if omitted will default to 5. If any user is mentioned in the command the countdown will only start once all mentioned users have declared they're ready.\n\nExamples:\n"${guildPrefix}cd 5" will start counting down from 5.\n\n "${guildPrefix}cd @UserA @UserB" will ask UserA and UserB for confirmation via reactions before starting counting down from 5.`)
+		.addField(`welcomepoints<wp> [ {"me" | "rt" | @User | POSITION} ]`, `Welcome points leaderboard. If you use the command without arguments it shows you the top 25. If you mention a User or use {"me" | POSITION} as an argument it will show said user's info. If "rt" is used as an argument it will show a list of the fastest welcomes.\n\nExamples:\n"${guildPrefix}wp @${whocalls.username}" shows you ${whocalls.username}'s points, fastest reaction and position in the leaderboard.\n\n"${guildPrefix}wp 42" shows you the 42nd place in the leaderboard.`);
+	if ( typeof whocalls == 'string' && whocalls === 'new') return embed;
+	embed.setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
+	return embed;
+}
+
 /* Thanks Carigs <3 
 https://github.com/mcarigs */
 function getPlacementString(pos){
     let i = pos % 10, j = pos % 100;
-    if (i == 1 && j != 11) { return `${pos}st`; }
-    if (i == 2 && j != 12) { return `${pos}nd`; }
-    if (i == 3 && j != 13) { return `${pos}rd`; }
-    return `${pos}th`;
+    if (i == 1 && j != 11) { 
+    	if (pos == 1) return `🟡 ${pos}st`;
+    	else return `🔸${pos}st`; }
+    if (i == 2 && j != 12) { 
+    	if (pos == 2) return `⚪ ${pos}nd`; 
+    	else return `🔸${pos}nd`; }
+    if (i == 3 && j != 13) {
+    	if (pos == 3) return `🟤 ${pos}rd`; 
+    	else return `🔸${pos}rd`; }
+    return `🔸${pos}th`;
 }
