@@ -58,11 +58,11 @@ client.on('message', async message => {
 			const readyFilter = (r, user) => (r.emoji.name === '👍' || r.emoji.name === '👎') && user.id === whocalls.id;
 			const readyCollector = readyMsg.createReactionCollector(readyFilter, {time:60000, dispose:true});
 
-			console.log(`[GUILD_CONFIG]attempting to change ${message.guild.name}(${message.guild.id})'s prefix to ${args[0]}`);
+			console.log(`[GUILD_CONFIG][${message.guild.name}(${message.guild.id})] attempting to change prefix to ${args[0]}`);
 
 			readyCollector.on('collect', async (r,user) => {
 				if (r.emoji.name === '👎') {
-					console.log(`[GUILD_CONFIG]cancelled prefix change`);
+					console.log(`[GUILD_CONFIG][${message.guild.name}(${message.guild.id})] cancelled prefix change`);
 					readyCollector.stop(`${user.username} cancelled`);
 					embed.setTitle('PREFIX CONFIGURATION')
 					.setDescription(`Prefix change cancelled...`);
@@ -74,7 +74,7 @@ client.on('message', async message => {
 					}, 5000);
 					return;
 				} else {
-					console.log(`[GUILD_CONFIG]${message.guild.name}(${message.guild.id})'s prefix succesfully changed to ${args[0]}`);
+					console.log(`[GUILD_CONFIG][${message.guild.name}(${message.guild.id})] prefix succesfully changed to ${args[0]}`);
 					config.prefix[message.guild.id] = args[0];
 					try { fs.writeFileSync('./config.json', JSON.stringify(config)); }
 					catch(err) { console.error(err); }
@@ -98,14 +98,14 @@ client.on('message', async message => {
 		if (args.length < 1) {
 			lockcd[message.channel.id] = true;
 			const left = parseTimeArg(5);
-			countdown(left,message.channel);
+			countdown(left,message);
 			return;
 		} 
 		/* NO MENTIONED USERS (CD: ARG OR DEFAULT 5)*/
 		else if (message.mentions.users.size < 1) { 
 			lockcd[message.channel.id] = true;
 			let left = parseTimeArg(args[0]);
-			countdown(left, message.channel);
+			countdown(left, message);
 			return;
 		} 
 		/* MENTIONED USERS (CD: ARG OR DEFAULT 5) */
@@ -127,12 +127,12 @@ client.on('message', async message => {
 			const readyCollector = readyMsg.createReactionCollector(readyFilter, {time:60000, dispose:true});
 
 			let left = parseTimeArg(args[0]);
-			console.log(`[CD]mention countdown ON STAND BY with ${left} as time`);
-			console.log(`[CD]waiting for ${participants.map(user => user.username).join(', ')} to react on countdown confirmation`)
+			console.log(`[CD][${message.guild.name}(${message.guild.id})] mention countdown ON STAND BY with ${left} as time`);
+			console.log(`[CD][${message.guild.name}(${message.guild.id})] waiting for ${participants.map(user => user.username).join(', ')} to react on countdown confirmation`)
 
 			readyCollector.on('collect', async (r,user) => {
 				if (r.emoji.name === '👎') {
-					console.log(`[CD]${user.username} is NOT READY`);
+					console.log(`[CD][${message.guild.name}(${message.guild.id})] ${user.username} is NOT READY`);
 					readyCollector.stop(`${user.username} is NOT READY`);
 					embed.setTitle('COUNTDOWN CANCELLED')
 					.setDescription(`${user.username} is NOT READY. Countdown cancelled...`)
@@ -144,7 +144,7 @@ client.on('message', async message => {
 					lockcd[message.channel.id] = false;
 					return;
 				} else {
-					console.log(`[CD]${user.username} is READY`);
+					console.log(`[CD][${message.guild.name}(${message.guild.id})] ${user.username} is READY`);
 				}
 				readyCollector.users.sweep(user => user.bot);
 
@@ -154,18 +154,18 @@ client.on('message', async message => {
 					readyMsg.delete();
 					readyMsg = await message.channel.send(embed);
 
-					countdown(left, message.channel);
+					countdown(left, message);
 					return;
 				}
 			});
 			readyCollector.on('remove', async (r,user) => {
-				console.log(`[CD]${user.username} is NO LONGER READY`)
+				console.log(`[CD][${message.guild.name}(${message.guild.id})] ${user.username} is NO LONGER READY`)
 			});
 			readyCollector.on('end', async (collected, reason) => {
 				if (reason.includes('time')){
-					console.log(`[CD]countdown TIMED OUT`);
+					console.log(`[CD][${message.guild.name}(${message.guild.id})] countdown TIMED OUT`);
 					const noAnswers = readyCollector.users.difference(participants).map(user => user.username);
-					console.log(`[CD]${noAnswers.join(', ')} didn't answer within 60 seconds`)
+					console.log(`[CD][${message.guild.name}(${message.guild.id})] ${noAnswers.join(', ')} didn't answer within 60 seconds`)
 					embed.setTitle('COUNTDOWN CANCELLED')
 					.setDescription(`${noAnswers.join(', ')} didn't react. Countdown cancelled...`);
 					readyMsg.delete();
@@ -207,7 +207,7 @@ client.on('message', async message => {
 
 		// send top25 (or less if not enough entries) if no arguments
 		if (args.length == 0){
-			console.log(`[WP]${whocalls.username} queried top welcomers`);
+			console.log(`[WP][${message.guild.name}(${message.guild.id})] ${whocalls.username} queried top welcomers`);
 			let maxentries = 0;
 			embed.setDescription(`🏆 Top Welcomers 🏆`)
 			if (sortedLB.length < 25){
@@ -229,10 +229,10 @@ client.on('message', async message => {
 			message.reply(embed);
 		} else if (args.length > 1) {
 			// ONLY ONE MENTION ALLOWED FOR QUERY
-			console.log('[WP]too many args');
+			console.log(`[WP][${message.guild.name}(${message.guild.id})] too many args`);
 			return;
 		} else if (args[0] == 'reaction' || args[0] == 'rt'){
-			console.log(`[WP]${whocalls.username} queried fastest welcomers`);
+			console.log(`[WP][${message.guild.name}(${message.guild.id})] ${whocalls.username} queried fastest welcomers`);
 			let maxentries = 0;
 			const sortedRT = Object.entries(guildRT)
 			.sort(([,x],[,y]) => x-y);
@@ -256,7 +256,7 @@ client.on('message', async message => {
 
 			message.reply(embed);
 		} else if (args[0] == 'me') {
-			console.log(`[WP]${whocalls.username} queried their welcome points info`);
+			console.log(`[WP][${message.guild.name}(${message.guild.id})] ${whocalls.username} queried their welcome points info`);
 			let pointsstr = '0 points';
 			if(guildPoints[whocalls.id]) {
 				pointsstr = guildPoints[whocalls.id] + ' points'
@@ -279,7 +279,7 @@ client.on('message', async message => {
 			message.reply(embed);
 		} else if (message.mentions.users.size == 1) {
 			let who = message.mentions.users.first();
-			console.log(`[WP]${whocalls.username} queried ${who.username}'s welcome points info`);
+			console.log(`[WP][${message.guild.name}(${message.guild.id})] ${whocalls.username} queried ${who.username}'s welcome points info`);
 
 			let pointsstr = '0 points';
 			if(guildPoints[who.id]) {
@@ -303,7 +303,7 @@ client.on('message', async message => {
 			message.reply(embed);
 		} else if (parseInt(args[0]) > 0) {
 			const pos = parseInt(args[0]);
-			console.log(`[WP]${whocalls.username} queried pos. ${pos} on the WP leaderboard`);
+			console.log(`[WP][${message.guild.name}(${message.guild.id})] ${whocalls.username} queried pos. ${pos} on the WP leaderboard`);
 			if (pos > sortedLB.length) {
 				console.log('[WP]query outside of range')
 				message.reply(`This leaderboard only has ${sortedLB.length} entries, try with a number lower than that.`)
@@ -340,7 +340,7 @@ client.on('message', async message => {
 client.on("guildMemberAdd", member => {
 	const welcomeChannel = member.guild.systemChannel;
 	const jointime = new Date();
-	console.log(`[WP]${member.user.username} just joined the server, waiting for welcome message...`);
+	console.log(`[WP][${member.guild.name}(${member.guild.id})] ${member.user.username} just joined the server, waiting for welcome message...`);
 
 	const filter = m => m.content.toLowerCase().startsWith('welcome') 
 	|| m.content.toLowerCase().startsWith('greetings')
@@ -356,7 +356,7 @@ client.on("guildMemberAdd", member => {
 		const answertime = new Date();
 		const deltatime = answertime - jointime;
 		let dtstring = deltatime + 'ms';
-		console.log(`[WP]${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
+		console.log(`[WP][${m.guild.name}(${m.guild.id})] ${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
 		if (!guildPoints[m.author.id]){
 			points[m.guild.id][m.author.id] = 1;
 		} else {
@@ -390,9 +390,10 @@ client.on("guildCreate", async guild => {
 	}
 })
 
-function countdown(time, channel){
+function countdown(time, message){
 	let left = time;
-	console.log(`[CD]countdown STARTED with ${left} as time`);
+	let channel = message.channel;
+	console.log(`[CD][${message.guild.name}(${message.guild.id})] countdown STARTED with ${left} as time`);
 	let countdown = setInterval(function(){
 			if (left > 0){
 				channel.send(left);
@@ -401,7 +402,7 @@ function countdown(time, channel){
 			else if (left == 0){
 				channel.send('GO!');
 				lockcd[channel.id] = false;
-				console.log('[CD]countdown ENDED')
+				console.log(`[CD][${message.guild.name}(${message.guild.id})] countdown ENDED`)
 				clearInterval(countdown);
 			}
 	},1000);
