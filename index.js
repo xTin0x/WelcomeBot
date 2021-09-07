@@ -1,3 +1,6 @@
+require('console-stamp')(console, {
+	format: ':date(yyyy/mm/dd HH:MM:ss.l)'
+} );
 require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
@@ -9,7 +12,7 @@ const fs = require('fs');
 const prefix = config.prefix;
 
 client.once('ready', () => {
-  console.log('[INIT]Ready!');
+  console.log('[INIT] Ready!');
 });
 
 //client.login(process.env.TOKEN); Using .json token while I fix Docker issues.

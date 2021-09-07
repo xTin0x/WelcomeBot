@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "console-stamp": "^3.0.3",
     "discord.js": "^12.5.1",
     "dotenv": "^10.0.0"
   }
