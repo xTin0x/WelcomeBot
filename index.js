@@ -340,8 +340,11 @@ client.on('message', async message => {
 });
 
 /* Welcome Points */
-client.on("guildMemberAdd", member => {
-	const welcomeChannel = member.guild.systemChannel;
+client.on("guildMemberAdd", async member => {
+	const welcomeChannel = await member.guild.systemChannel;
+	if (welcomeChannel === null){
+		return;
+	}
 	const jointime = new Date();
 	console.log(`[WP][${member.guild.name}(${member.guild.id})] ${member.user.username} just joined the server, waiting for welcome message...`);
 
@@ -351,7 +354,7 @@ client.on("guildMemberAdd", member => {
 	|| m.content === `What's crack-a-lackin' my homie`
 	|| m.content == `https://c.tenor.com/Qy5sUxL5phgAAAAM/forest-gump-wave.gif`;
 
-	const collector = welcomeChannel.createMessageCollector(filter);
+	const collector = welcomeChannel.createMessageCollector(filter,  {time:43200000});
 
 	collector.on('collect', async m => {
 		const guildPoints = points[m.guild.id];
@@ -360,12 +363,12 @@ client.on("guildMemberAdd", member => {
 		const deltatime = answertime - jointime;
 		let dtstring = deltatime + 'ms';
 		console.log(`[WP][${m.guild.name}(${m.guild.id})] ${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
-		if (!guildPoints[m.author.id]){
+		if (guildPoints[m.author.id] === undefined || guildPoints[m.author.id] == 0){
 			points[m.guild.id][m.author.id] = 1;
 		} else {
 			points[m.guild.id][m.author.id] += 1;
 		}
-		if (!guildRT[m.author.id]){
+		if (guildRT[m.author.id] === undefined){
 			reactionTimes[m.guild.id][m.author.id] = deltatime;
 			dtstring = dtstring+' (New PB!)';
 		} else if (guildRT[m.author.id] > deltatime) {
@@ -386,10 +389,10 @@ client.on("guildMemberAdd", member => {
 client.on("guildCreate", async guild => {
 	console.log(`[NEW SERVER]bot was invited to a new server ${guild.name}(${guild.id})`)
 	try {
-		const welcomeChannel = guild.systemChannel;
+		const welcomeChannel = await guild.systemChannel;
 		welcomeChannel.send(sendHelp('new', '!'));
 	} catch(err) {
-
+		console.log(`[NEW SERVER]${guild.name}(${guild.id}) doesn't have a systemChannel!`)
 	}
 })
 
@@ -423,7 +426,7 @@ function parseTimeArg(time){
 function sendHelp(whocalls, guildPrefix) {
 	const embed = new Discord.MessageEmbed()
 		.setTitle(`WelcomeBot's List of Commands`)
-		.setDescription(`Commands have a short version indicated with <angle brackets>, with optional arguments in [square brackets]. If only one argument from a group of arguments {arg1 | arg2} is allowed it will be indicated with {curly brackets}. If the argument is a keyword it will be indicated with "quotation marks".`)
+		.setDescription(`Welcome points are awarded to the first user to greet a new member joining the server with a message starting with: \n - Welcome\n - Greetings\n - Salutations\n\n Commands have a short version indicated with <angle brackets>, with optional arguments in [square brackets]. If only one argument from a group of arguments {arg1 | arg2} is allowed it will be indicated with {curly brackets}. If the argument is a keyword it will be indicated with "quotation marks".`)
 		.addField(`countdown<cd> [TIME] [@User(s)]`, `Starts a countdown. If no users are mentioned the TIME argument is mandatory. TIME can only be in the range {3...10} and if omitted will default to 5. If any user is mentioned in the command the countdown will only start once all mentioned users have declared they're ready.\n\nExamples:\n"${guildPrefix}cd 5" will start counting down from 5.\n\n "${guildPrefix}cd @UserA @UserB" will ask UserA and UserB for confirmation via reactions before starting counting down from 5.`)
 		.addField(`welcomepoints<wp> [ {"me" | "rt" | @User | POSITION} ]`, `Welcome points leaderboard. If you use the command without arguments it shows you the top 25. If you mention a User or use {"me" | POSITION} as an argument it will show said user's info. If "rt" is used as an argument it will show a list of the fastest welcomes.\n\nExamples:\n"${guildPrefix}wp @${whocalls.username}" shows you ${whocalls.username}'s points, fastest reaction and position in the leaderboard.\n\n"${guildPrefix}wp 42" shows you the 42nd place in the leaderboard.`);
 	if ( typeof whocalls == 'string' && whocalls === 'new') return embed;
