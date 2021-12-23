@@ -11,6 +11,20 @@ const fs = require('fs');
 
 const prefix = config.prefix;
 
+const express = require('express');
+const PORT = 5000;
+const app = express();
+const Prometheus = require('prom-client');
+const collectDefaultMetrics = Prometheus.collectDefaultMetrics;
+collectDefaultMetrics({ timeout: 5000 });
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', Prometheus.register.contentType)
+    res.end(await Prometheus.register.metrics())
+})
+app.listen(PORT);
+
 client.once('ready', () => {
   console.log('[INIT] Ready!');
 });
