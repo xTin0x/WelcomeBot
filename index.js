@@ -8,22 +8,24 @@ const config = require('./config.json')
 const points = require('./points.json');
 const reactionTimes = require('./reactionTimes.json')
 const fs = require('fs');
-
 const prefix = config.prefix;
 
-const express = require('express');
-const PORT = 5000;
-const app = express();
-const Prometheus = require('prom-client');
-const collectDefaultMetrics = Prometheus.collectDefaultMetrics;
-collectDefaultMetrics({ timeout: 5000 });
+if (process.env.ENABLE_METRICS == true || config.enable_metrics == true) {
+	const express = require('express');
+	const PORT = 5000;
+	const app = express();
+	const Prometheus = require('prom-client');
 
-// Metrics endpoint
-app.get('/metrics', async (req, res) => {
-    res.set('Content-Type', Prometheus.register.contentType)
-    res.end(await Prometheus.register.metrics())
-})
-app.listen(PORT);
+	// Metrics configuration
+	const collectDefaultMetrics = Prometheus.collectDefaultMetrics;
+	collectDefaultMetrics({ timeout: 5000 });
+	app.get('/metrics', async (req, res) => {
+	    res.set('Content-Type', Prometheus.register.contentType)
+	    res.end(await Prometheus.register.metrics())
+	})
+	app.listen(PORT);
+	console.log(`Metrics endpoint running at localhost:5000/metrics`);
+}
 
 client.once('ready', () => {
   console.log('[INIT] Ready!');
