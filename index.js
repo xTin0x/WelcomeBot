@@ -9,7 +9,8 @@ const points = require('./points.json');
 const reactionTimes = require('./reactionTimes.json')
 const fs = require('fs');
 const prefix = config.prefix;
-const rstDecimal = 2;
+const rstDecimal = 2; // Response time accuracy
+
 client.once('ready', () => {
     console.log('[INIT] Ready!');
 });
@@ -273,7 +274,7 @@ client.on('message', async message => {
 			if (sortedLB.findIndex(entry => entry[0] == whocalls.id) != -1) {
 				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == whocalls.id)+1)} place`;
 
-				// Determine who is one place above the requested user on the leaderboard
+				// Determine who is one place above the requested user on the WP leaderboard
 				// and how many points are needed to take their place
 				nextPos = sortedLB.findIndex(entry => entry[0] == whocalls.id);
 				if (nextPos != 0 && typeof nextPos != 'undefined') {
@@ -288,6 +289,8 @@ client.on('message', async message => {
 			let rtstr = 'No reaction time registered';
 			if (guildRT[whocalls.id]) {
 				rtstr = `${guildRT[whocalls.id] > 1000 ? (guildRT[whocalls.id] % 60000 / 1000).toFixed(rstDecimal)+'s' : guildRT[whocalls.id]+'ms'}`;
+				// Determine who is one place above the requested user on the RT leaderboard
+				// and how much faster they need to be to take their place
                 nextRstPos = sortedRT.findIndex(entry => entry[0] == whocalls.id);
                 if (nextRstPos != 0 && typeof nextRstPos != 'undefined') {
 				    rstPosStr = `${getPlacementString(nextRstPos).replace('🔸', '')} place`;
@@ -325,7 +328,7 @@ client.on('message', async message => {
 			if (sortedLB.findIndex(entry => entry[0] == who.id) != -1) {
 				posstr = `${getPlacementString(sortedLB.findIndex(entry => entry[0] == who.id)+1)} place`;
 
-				// Determine who is one place above the requested user on the leaderboard
+				// Determine who is one place above the requested user on the WP leaderboard
 				// and how many points are needed to take their place
 				nextPos = sortedLB.findIndex(entry => entry[0] == who.id);
 				if (nextPos != 0 && typeof nextPos != 'undefined') {
@@ -340,6 +343,8 @@ client.on('message', async message => {
 			let rtstr = 'No reaction time registered';
 			if (guildRT[who.id]) { 
 				rtstr = `${guildRT[who.id] > 1000 ? (guildRT[who.id] % 60000 / 1000).toFixed(rstDecimal)+'s' : guildRT[who.id]+'ms'}`;
+				// Determine who is one place above the requested user on the RT leaderboard
+				// and how much faster they need to be to take their place
                 nextRstPos = sortedRT.findIndex(entry => entry[0] == who.id);
                 if (nextRstPos != 0 && typeof nextRstPos != 'undefined') {
 				    rstPosStr = `${getPlacementString(nextRstPos).replace('🔸', '')} place`;
@@ -381,7 +386,7 @@ client.on('message', async message => {
 				let nextPosUser = 'unknown [not in server]';
 				let nextPos, nextPosPoints, pointsNeeded = 0;
 
-				// Determine who is one place above the requested user on the leaderboard
+				// Determine who is one place above the requested user on the WP leaderboard
 				// and how many points are needed to take their place
 				nextPos = sortedLB.findIndex(entry => entry[0] == whois.id);
 				if (nextPos != 0 && typeof nextPos != 'undefined') {
@@ -395,6 +400,8 @@ client.on('message', async message => {
 				let rtstr = 'No reaction time registered';
 				if (guildRT[sortedLB[pos-1][0]]) { 
 					rtstr = `${guildRT[sortedLB[pos-1][0]] > 1000 ? (guildRT[sortedLB[pos-1][0]] % 60000 / 1000).toFixed(rstDecimal)+'s' : guildRT[sortedLB[pos-1][0]]+'ms'}`;
+					// Determine who is one place above the requested user on the RT leaderboard
+					// and how much faster they need to be to take their place
                 	nextRstPos = sortedRT.findIndex(entry => entry[0] == whois.id);
                 	if (nextRstPos != 0 && typeof nextRstPos != 'undefined') {
 					    rstPosStr = `${getPlacementString(nextRstPos).replace('🔸', '')} place`;
@@ -421,11 +428,6 @@ client.on('message', async message => {
 	} else if (command == 'help' || command == 'h'){
 		message.reply(sendHelp(whocalls, guildPrefix));
 	}
-	//if (!message.content.toLowerCase().startsWith('!clear')) { 
-	//	message.delete()
-	//	.then(() => console.log(`${whocalls.username}'s command message has been deleted`))
-	//	.catch(err => console.log(err));
-	//}
 });
 
 /* Welcome Points */
