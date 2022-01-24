@@ -452,7 +452,7 @@ client.on("guildMemberAdd", async member => {
 		const guildRT = reactionTimes[m.guild.id];
 		const answertime = new Date();
 		const deltatime = answertime - jointime;
-		let dtstring = deltatime + 'ms';
+		let dtstring = `${deltatime > 1000 ? (deltatime % 60000 / 1000).toFixed(rstDecimal)+'s' : deltatime+'ms'}`;
 		console.log(`[WP][${m.guild.name}(${m.guild.id})] ${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
 		if (guildPoints[m.author.id] === undefined || guildPoints[m.author.id] == 0){
 			points[m.guild.id][m.author.id] = 1;
