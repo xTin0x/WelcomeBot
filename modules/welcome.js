@@ -1,23 +1,7 @@
 const vars = require('../vars.js');
 
-exports.getWelcomePointsLB = async (msg, args) => {
+exports.getWelcomePointsLB = async (msg, args, guildPoints, guildRT) => {
   const whocalls = msg.author;
-
-  /* GET OR INITIALIZE POINTS/REACTION LEADERBOARDS */
-  let guildPoints = vars.points[msg.guild.id];
-  if (typeof guildPoints == 'undefined') {
-    vars.points[msg.guild.id] = new Object() ; 
-    guildPoints = vars.points[msg.guild.id];
-    try { vars.fs.writeFileSync('./leaderboards/points.json', JSON.stringify(vars.points)); }
-    catch(err) { console.error(err); }
-  }
-  let guildRT = vars.reactionTimes[msg.guild.id];
-  if (typeof guildRT == 'undefined') {
-    vars.reactionTimes[msg.guild.id] = new Object(); 
-    guildRT = vars.reactionTimes[msg.guild.id];
-    try { vars.fs.writeFileSync('./leaderboards/reactionTimes.json', JSON.stringify(vars.reactionTimes)); }
-    catch(err) { console.error(err); }
-  }
 
   // sort point & response time db into array []
   const sortedLB = Object.entries(guildPoints)

@@ -119,6 +119,8 @@ dist
 
 # local
 points.json
+pointsOverall.json
 reactionTimes.json
+reactionTimesOverall.json
 config.json
 .env.local

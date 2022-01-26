@@ -27,6 +27,22 @@ vars.client.on('message', async message => {
 	const modMembers = message.guild.members.cache.filter(member => member.roles.cache.find(role => role == modRole)).map(member => member.user.id);
 	const adminMembers = message.guild.members.cache.filter(member => member.roles.cache.find(role => role == adminRole)).map(member => member.user.id);
 
+	/* GET OR INITIALIZE POINTS/REACTION LEADERBOARDS */
+	let guildPoints = vars.points[message.guild.id];
+	if (typeof guildPoints == 'undefined') {
+		vars.points[message.guild.id] = new Object() ; 
+		guildPoints = vars.points[message.guild.id];
+		try { vars.fs.writeFileSync('./leaderboards/points.json', JSON.stringify(vars.points)); }
+		catch(err) { console.error(err); }
+	}
+	let guildRT = vars.reactionTimes[message.guild.id];
+	if (typeof guildRT == 'undefined') {
+		vars.reactionTimes[message.guild.id] = new Object(); 
+		guildRT = vars.reactionTimes[message.guild.id];
+		try { vars.fs.writeFileSync('./leaderboards/reactionTimes.json', JSON.stringify(vars.reactionTimes)); }
+		catch(err) { console.error(err); }
+	}
+
 	/* FILTERS */
 	message.mentions.users.sweep(user => user.bot); //cannot reference bots for commands!
 
@@ -54,7 +70,7 @@ vars.client.on('message', async message => {
 	}
 	/* WELCOME POINTS COMMAND */ 
 	else if (command == 'welcomepoints' || command == 'wp'){
-		welcome.getWelcomePointsLB(message, args);
+		welcome.getWelcomePointsLB(message, args, guildPoints, guildRT);
 	} else if (command == 'help' || command == 'h'){
 		message.reply(sendHelp(whocalls, guildPrefix));
 	}
@@ -78,29 +94,29 @@ vars.client.on("guildMemberAdd", async member => {
 	const collector = welcomeChannel.createMessageCollector(filter,  {time:43200000});
 
 	collector.on('collect', async m => {
-		const guildPoints = points[m.guild.id];
-		const guildRT = reactionTimes[m.guild.id];
+		const guildPoints = vars.points[m.guild.id];
+		const guildRT = vars.reactionTimes[m.guild.id];
 		const answertime = new Date();
 		const deltatime = answertime - jointime;
-		let dtstring = `${deltatime > 1000 ? (deltatime % 60000 / 1000).toFixed(rstDecimal)+'s' : deltatime+'ms'}`;
+		let dtstring = `${deltatime > 1000 ? (deltatime % 60000 / 1000).toFixed(vars.rstDecimal)+'s' : deltatime+'ms'}`;
 		console.log(`[WP][${m.guild.name}(${m.guild.id})] ${m.author.username} was the first to welcome ${member.user.username}! They scored a welcome point!`);
 		if (guildPoints[m.author.id] === undefined || guildPoints[m.author.id] == 0){
-			points[m.guild.id][m.author.id] = 1;
+			vars.points[m.guild.id][m.author.id] = 1;
 		} else {
-			points[m.guild.id][m.author.id] += 1;
+			vars.points[m.guild.id][m.author.id] += 1;
 		}
 		if (guildRT[m.author.id] === undefined){
-			reactionTimes[m.guild.id][m.author.id] = deltatime;
+			vars.reactionTimes[m.guild.id][m.author.id] = deltatime;
 			dtstring = dtstring+' (New PB!)';
 		} else if (guildRT[m.author.id] > deltatime) {
-			reactionTimes[m.guild.id][m.author.id] = deltatime;
+			vars.reactionTimes[m.guild.id][m.author.id] = deltatime;
 			dtstring += ' (New PB!)';
 		}
 		m.reply(`+1 welcome point! [Response time: ${dtstring}]`);
 		collector.stop('welcomed');
 		try {
-			fs.writeFileSync('./points.json', JSON.stringify(points));
-			fs.writeFileSync('./reactionTimes.json', JSON.stringify(reactionTimes));
+			vars.fs.writeFileSync('./points.json', JSON.stringify(vars.points));
+			vars.fs.writeFileSync('./reactionTimes.json', JSON.stringify(vars.reactionTimes));
 		} catch (err) {
 			console.error(err)
 		}
