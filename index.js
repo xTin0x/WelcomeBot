@@ -115,8 +115,8 @@ vars.client.on("guildMemberAdd", async member => {
 		m.reply(`+1 welcome point! [Response time: ${dtstring}]`);
 		collector.stop('welcomed');
 		try {
-			vars.fs.writeFileSync('./points.json', JSON.stringify(vars.points));
-			vars.fs.writeFileSync('./reactionTimes.json', JSON.stringify(vars.reactionTimes));
+			vars.fs.writeFileSync('./leaderboards/points.json', JSON.stringify(vars.points));
+			vars.fs.writeFileSync('./leaderboards//reactionTimes.json', JSON.stringify(vars.reactionTimes));
 		} catch (err) {
 			console.error(err)
 		}

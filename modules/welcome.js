@@ -1,17 +1,40 @@
 const vars = require('../vars.js');
 
 exports.getWelcomePointsLB = async (msg, args, guildPoints, guildRT) => {
+
+	let pointsOverall = vars.overallPoints[msg.guild.id];
+	if (typeof pointsOverall == 'undefined') {
+		vars.overallPoints[msg.guild.id] = new Object() ; 
+		pointsOverall = vars.overallPoints[msg.guild.id];
+		try { vars.fs.writeFileSync('./leaderboards/pointsOverall.json', JSON.stringify(vars.overallPoints)); }
+		catch(err) { console.error(err); }
+	}
+		
+	let reactionTimesOverall = vars.overallRT[msg.guild.id];
+	if (typeof reactionTimesOverall == 'undefined') {
+		vars.overallRT[msg.guild.id] = new Object(); 
+		reactionTimesOverall = vars.overallRT[msg.guild.id];
+		try { vars.fs.writeFileSync('./leaderboards/reactionTimesOverall.json', JSON.stringify(vars.overallRT)); }
+		catch(err) { console.error(err); }
+	}
+
   const whocalls = msg.author;
 
   // sort point & response time db into array []
   const sortedLB = Object.entries(guildPoints)
     .sort(([,x],[,y]) => y-x);
 
+  const sortedOverallLB = Object.entries(pointsOverall)
+    .sort(([,x],[,y]) => y-x);
+
   const sortedRT = Object.entries(guildRT)
+    .sort(([,x],[,y]) => x-y);
+  
+  const sortedOverallRT = Object.entries(reactionTimesOverall)
     .sort(([,x],[,y]) => x-y);
 
   // base embed
-  const embed = new vars.Discord.MessageEmbed()
+  let embed = new vars.Discord.MessageEmbed()
     .setTitle('Welcome Points Leaderboard')
     .setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
 
@@ -55,8 +78,7 @@ exports.getWelcomePointsLB = async (msg, args, guildPoints, guildRT) => {
       try {
         const whois = await vars.client.users.fetch(sortedRT[i][0]);
         whoisname = whois.username;
-      } catch (err) {
-      }
+      } catch (err) { console.error(err); }
       embed.addField(`${getPlacementString(i+1)} ${whoisname}`, `${sortedRT[i][1] > 1000 ? (sortedRT[i][1] % 60000 / 1000).toFixed(vars.rstDecimal)+'s' : sortedRT[i][1]+'ms'}`, true);
     }
 
@@ -224,6 +246,58 @@ exports.getWelcomePointsLB = async (msg, args, guildPoints, guildRT) => {
               }
       msg.reply(embed);
     }
+  } else if (args[0] == 'allpoints' || args[0] == 'ap') {
+
+    // TODO: Allow additional args such as 'me', @User and POSITION
+    // to show the next position details on the overall leaderboards
+
+    // base embed
+    embed = new vars.Discord.MessageEmbed()
+      .setTitle('Welcome Points Overall Leaderboard')
+      .setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
+
+    console.log(`[WP][${msg.guild.name}(${msg.guild.id})] ${whocalls.username} queried top welcomers overall`);
+    let maxentries = 0;
+    embed.setDescription(`🏆 Top Welcomers Overall 🏆`)
+    if (sortedOverallLB.length < 50){
+      maxentries = sortedOverallLB.length;
+    } else {
+      maxentries = 50;
+    }
+    for (let i = 0; i < maxentries; i++) {
+      let whoisname = 'Unknown';
+      try {
+        const whois = await vars.client.users.fetch(sortedOverallLB[i][0]);
+        whoisname = whois.username;
+      } catch (err) { console.error(err); }
+      embed.addField(`${getPlacementString(i+1)} ${whoisname}`, `${getPointString(sortedOverallLB[i][1])}`, true);
+    }
+
+    msg.reply(embed);
+  } else if (args[0] == 'alltimes' || args[0] == 'at') {
+
+    // base embed
+    embed = new vars.Discord.MessageEmbed()
+      .setTitle('Welcome Points Overall Leaderboard')
+      .setFooter(`Request by ${whocalls.tag}`, whocalls.displayAvatarURL());
+
+    console.log(`[WP][${msg.guild.name}(${msg.guild.id})] ${whocalls.username} queried top welcomers overall`);
+    let maxentries = 0;
+    embed.setDescription(`🏆 Fastest Welcomes Overall 🏆`)
+    if (sortedOverallRT.length < 50) {
+      maxentries = sortedOverallRT.length;
+    } else {
+      maxentries = 50;
+    }
+    for (let i = 0; i < maxentries; i++) {
+      let whoisname = 'Unknown';
+      try {
+        const whois = await vars.client.users.fetch(sortedOverallRT[i][0]);
+        whoisname = whois.username;
+      } catch (err) { console.error(err); }
+      embed.addField(`${getPlacementString(i+1)} ${whoisname}`, `${sortedOverallRT[i][1] > 1000 ? (sortedOverallRT[i][1] % 60000 / 1000).toFixed(vars.rstDecimal)+'s' : sortedOverallRT[i][1]+'ms'}`, true);
+    }
+    msg.reply(embed);
   }
 }
 
