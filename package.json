@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start:local": "node -r dotenv/config index.js dotenv_config_path=.env.local",
-    "start:server-a": "node -r dotenv/config index.js dotenv_config_path=.env.server-a",
-    "start:server-b": "node -r dotenv/config index.js dotenv_config_path=.env.server-b",
+    "start:mgsr": "node -r dotenv/config index.js dotenv_config_path=.env.mgsr",
+    "start:limecity": "node -r dotenv/config index.js dotenv_config_path=.env.limecity",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

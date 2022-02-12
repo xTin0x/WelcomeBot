@@ -1,13 +1,11 @@
 const Discord = require('discord.js');
-const config = require('./config.json');
 const fs = require('fs');
-const prefix = config.prefix;
+const config = require('./config.json');
 
 exports.Discord = Discord;
 exports.client = new Discord.Client();
-exports.config = config;
 exports.fs = fs;
-exports.prefix = prefix;
+exports.config = config;
 exports.rstDecimal = 2; // Response time accuracy
 
 exports.points = require('./leaderboards/points.json');

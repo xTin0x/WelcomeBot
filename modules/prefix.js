@@ -1,19 +1,7 @@
 const vars = require('../vars.js');
 
-  /* GET GUILD PREFIX */
-exports.getGuildPrefix = (msg, conf) => {
-  let pfx = vars.prefix[msg.guild.id];
-  if (typeof pfx == 'undefined') {
-    vars.prefix[msg.guild.id] = "!" ; 
-    pfx = vars.prefix[msg.guild.id];
-    try { vars.fs.writeFileSync('./config.json', JSON.stringify(conf)); }
-    catch(err) { console.error(err); }
-  }
-  return(pfx);
-}
-
 /* SET NEW GUILD PREFIX */
-exports.setGuildPrefix = async (args, msg, mods, admins) => {
+exports.setGuildPrefix = async (args, msg, valid, mods, admins) => {
   const whocalls = msg.author;
   if (!mods.includes(whocalls.id) && !admins.includes(whocalls.id)) {
     console.log(`Prefix change denied for ${whocalls.username}. They must be have the Mods or Admin role to change the bot command prefix`);
@@ -21,7 +9,7 @@ exports.setGuildPrefix = async (args, msg, mods, admins) => {
   }
   if (args.length != 1) {
     msg.reply('Invalid number of arguments (max: 1).')
-  } else {
+  } else if (valid.test(args[0])) {
     const embed = new vars.Discord.MessageEmbed()
     .setTitle('PREFIX CONFIGURATION')
     .setDescription(`Are you sure you want to change this bot's command prefix to:`)
@@ -54,7 +42,8 @@ exports.setGuildPrefix = async (args, msg, mods, admins) => {
       } else {
         console.log(`[GUILD_CONFIG][${msg.guild.name}(${msg.guild.id})] prefix succesfully changed to ${args[0]}`);
         vars.config.prefix[msg.guild.id] = args[0];
-        try { vars.fs.writeFileSync('./config.json', JSON.stringify(vars.config)); }
+        process.env.PREFIX = args[0];
+	try { vars.fs.writeFileSync('./config.json', JSON.stringify(vars.config)); }
         catch(err) { console.error(err); }
         embed.setTitle('PREFIX CONFIGURATION')
         .setDescription('Prefix succesfully changed to: ');
@@ -65,5 +54,5 @@ exports.setGuildPrefix = async (args, msg, mods, admins) => {
       try { vars.fs.writeFileSync('./config.json', JSON.stringify(vars.config)); }
       catch(err) { console.error(err); }
     });
-  }
+  } else msg.reply('Invalid character for command prefix.')
 }

@@ -9,7 +9,7 @@ exports.getWelcomePointsLB = async (msg, args, guildPoints, guildRT) => {
 		try { vars.fs.writeFileSync('./leaderboards/pointsOverall.json', JSON.stringify(vars.overallPoints)); }
 		catch(err) { console.error(err); }
 	}
-		
+
 	let reactionTimesOverall = vars.overallRT[msg.guild.id];
 	if (typeof reactionTimesOverall == 'undefined') {
 		vars.overallRT[msg.guild.id] = new Object(); 

@@ -1,0 +1,37 @@
+---
+version: "3.1"
+
+services:
+
+  welcome-bot-local:
+    build:
+      context: ./
+    container_name: welcome-bot-local
+    image: welcome-bot-local
+    environment:
+      - NODE_ENV=local
+    volumes:
+      - /app/data/local:/app/leaderboards
+    restart: 'unless-stopped'
+
+  welcome-bot-mgsr:
+    build:
+      context: ./
+    container_name: welcome-bot-mgsr
+    image: welcome-bot-mgsr
+    environment:
+      - NODE_ENV=mgsr
+    volumes:
+      - /app/data/mgsr:/app/leaderboards
+    restart: 'unless-stopped'
+
+  welcome-bot-limecity:
+    build:
+      context: ./
+    container_name: welcome-bot-limecity
+    image: welcome-bot-limecity
+    environment:
+      - NODE_ENV=limecity
+    volumes:
+      - /app/data/limecity:/app/leaderboards
+    restart: 'unless-stopped'

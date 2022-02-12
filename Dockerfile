@@ -1,4 +1,4 @@
-FROM node:slim
+FROM node:12.22.8-slim
 ENV NODE_ENV=local
 WORKDIR /app
 COPY . .
